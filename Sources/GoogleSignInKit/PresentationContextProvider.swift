@@ -7,7 +7,6 @@
 
 import AuthenticationServices
 
-@available(iOS 13.0, macOS 10.15, macCatalyst 13.0, *)
 internal final class PresentationContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
     private let appAnchor: ASPresentationAnchor
     

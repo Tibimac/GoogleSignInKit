@@ -5,9 +5,21 @@
 //  Created by Thibault Le Cornec on 25/05/2021.
 //
 
+#if os(iOS)
 import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 import SafariServices
 import AuthenticationServices
+
+#if os(iOS)
+import UIKit
+public typealias Window = UIWindow
+#elseif os(macOS)
+import AppKit
+public typealias Window = NSWindow
+#endif
 
 public enum GoogleSignInKit {
     
@@ -60,33 +72,26 @@ public enum GoogleSignInKit {
     
     private static var state: String!
     private static var configuration: Manager.Configuration!
-    private static var overrideConfiguration: Configuration?
-    private static var completionResult: CompletionResult!
     
     private static let jsonDecoder: JSONDecoder = {
         $0.keyDecodingStrategy = .convertFromSnakeCase
         return $0
     }(JSONDecoder())
-    
-    private static var appWindow: UIWindow? {
-        return UIApplication.shared.keyWindow
+
+    private static var appWindow: Window? {
+#if os(iOS)
+        return UIApplication
+            .shared
+            .connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first(where: { $0.isKeyWindow })
+#elseif os(macOS)
+        return NSApplication.shared.keyWindow
+#endif
     }
-    
-    private static var topPresentedViewController: UIViewController? {
-        var topPresented: UIViewController? = appWindow?.rootViewController
-        while let presented = topPresented?.presentedViewController { topPresented = presented }
-        return topPresented
-    }
-    
-    /* According to documentation we need to keep a strong reference on ASWebAuthenticationSession
-       * instance as our deployment target is below iOS 13.0.
-       * https://developer.apple.com/documentation/authenticationservices/aswebauthenticationsession/2990953-start */
-    @available(iOS 12.0, macOS 10.15, macCatalyst 13.0, watchOS 6.2, *)
-    private static var authenticationSession: ASWebAuthenticationSession!
-    
-    @available(iOS 13.0, macOS 10.15, macCatalyst 13.0, *)
+
     private static var presentationContextProvider: PresentationContextProvider!
-    private static var safariViewControllerDelegate: SafariViewControllerDelegate!
     
     // MARK: - Usage
     
@@ -116,7 +121,6 @@ public enum GoogleSignInKit {
         
         /* Sign-In Prerequisites Setup */
         
-        overrideConfiguration = overrideConfig
         state = UUID().uuidString
         
         /* Authentication Request Setup */
@@ -139,130 +143,85 @@ public enum GoogleSignInKit {
             resetManager()
             throw GoogleSignInKit.Error.failedToSetupAuthenticationRequest
         }
-        
-        if #available(iOS 12.0, macOS 10.15, macCatalyst 13.0, watchOS 6.2, *) {
-            /* On iOS 12 and later we can use ASWebAuthenticationSession which handles callback URL. */
-            /* Authentication Session Setup */
-            
-            authenticationSession = ASWebAuthenticationSession(url: authenticationURL, callbackURLScheme: scheme) { (callbackURL, error) in
-                /* Callback URL Checks and Parsing */
-                
-                guard error == nil else {
-                    guard let error = error as? ASWebAuthenticationSessionError else {
-                        completion(.failure(.unknown))
-                        resetManager()
-                        return
-                    }
-                    
-                    switch error.code {
-                    case .canceledLogin:
-                        completion(.failure(.canceled))
-                        
-                    case .presentationContextNotProvided, .presentationContextInvalid:
-                        completion(.failure(.cannotStartAuthentication))
-                        
-                    @unknown default:
-                        completion(.failure(.unknown))
-                    }
+
+        /* Authentication Session Setup */
+
+        let authenticationSession = ASWebAuthenticationSession(url: authenticationURL, callbackURLScheme: scheme) { (callbackURL, error) in
+            /* Callback URL Checks and Parsing */
+
+            guard error == nil else {
+                guard let error = error as? ASWebAuthenticationSessionError else {
+                    completion(.failure(.unknown))
                     resetManager()
                     return
                 }
-                
-                guard let urlDictionary = callbackURL?.queryDictionary else {
-                    completion(.failure(.authenticationRequestFailed))
-                    resetManager()
-                    return
+
+                switch error.code {
+                case .canceledLogin:
+                    completion(.failure(.canceled))
+
+                case .presentationContextNotProvided, .presentationContextInvalid:
+                    completion(.failure(.cannotStartAuthentication))
+
+                @unknown default:
+                    completion(.failure(.unknown))
                 }
-                
-                /* Token Request */
-                
-                let result = AuthenticationRequest.Result(from: urlDictionary)
-                tokenRequest(wihtOverrideConfig: overrideConfiguration, authenticationResult: result, completion: completion)
-            }
-            
-            if #available(iOS 13.0, macOS 10.15, macCatalyst 13.0, *) {
-                guard let window = appWindow else {
-                    resetManager()
-                    throw GoogleSignInKit.Error.cannotStartAuthentication
-                }
-                presentationContextProvider = PresentationContextProvider(appAnchor: window)
-                authenticationSession.presentationContextProvider = presentationContextProvider
-            }
-            
-            if #available(iOS 13.4, macOS 10.15.4, macCatalyst 13.4, watchOS 6.2, *) {
-                guard authenticationSession.canStart else {
-                    resetManager()
-                    throw GoogleSignInKit.Error.cannotStartAuthentication
-                }
-            }
-            
-            /* Authentication Session Execution */
-            
-            authenticationSession.start()
-        } else {
-            /* On iOS versions ealier than iOS 12, we have to display an SFSafariViewController which
-               * doesn't handles callback URL itself. Callback is handle by the whole application delegate,
-               * and URL is redirected to this module through `handleCallback(url:)` function. That's why
-               * we have to keep a reference on completion handler to give it to `tokenRequest()` function
-               * from `handleCallback(url:)` function.*/
-            completionResult = completion
-            
-            /* Safari View Controller Setup */
-            
-            let safariViewController = SFSafariViewController(url: authenticationURL)
-            if #available(iOS 11.0, macCatalyst 13.0, *) { safariViewController.dismissButtonStyle = .cancel }
-            safariViewControllerDelegate = SafariViewControllerDelegate(completion: { result in
-                completion(result)
                 resetManager()
-            })
-            safariViewController.delegate = safariViewControllerDelegate
-            
-            /* Safari View Controller Display */
-            
-            guard let topPresentedViewController = topPresentedViewController else {
+                return
+            }
+
+            /* Checks callback URL exist and has a valid format */
+            guard let callbackURL, let callbackURLQueryItems = URLComponents(string: callbackURL.absoluteString)?.queryItems else {
+                completion(.failure(.authenticationRequestFailed))
+                resetManager()
+                return
+            }
+
+            /* Maps all query parameters in the callback URL into a dictionary */
+            let queryItemsDictionary = callbackURLQueryItems.reduce(into: [String: String]()) { result, item in
+                guard let value = item.value else { return }
+                result[item.name] = value
+            }
+
+            let authenticationResult = AuthenticationRequest.Result(from: queryItemsDictionary)
+
+            /* Checks code is well received and callback URL state is matching the current one to ensure we're processing the request we started ourselves */
+            guard let code = authenticationResult.code, authenticationResult.state == state else {
+                completion(.failure(.authenticationRequestFailed))
+                resetManager()
+                return
+            }
+
+            /* Token Request */
+
+            tokenRequest(wihtOverrideConfig: overrideConfig, code: code, completion: completion)
+        }
+
+        guard let window = appWindow else {
+            resetManager()
+            throw GoogleSignInKit.Error.cannotStartAuthentication
+        }
+        presentationContextProvider = PresentationContextProvider(appAnchor: window)
+        authenticationSession.presentationContextProvider = presentationContextProvider
+
+        if #available(iOS 13.4, macOS 10.15.4, macCatalyst 13.4, watchOS 6.2, *) {
+            guard authenticationSession.canStart else {
                 resetManager()
                 throw GoogleSignInKit.Error.cannotStartAuthentication
             }
-            topPresentedViewController.present(safariViewController, animated: true, completion: nil)
         }
-    }
-    
-    /** Method to call for compatibility with iOS 10/11 from your UIApplication delegate in method
-     `func application(_, open:options:)`. This methode take as paramter the callback url to be able
-     to retrieve the user token (JWT) from Google fo user. */
-    public static func handleCallback(url: URL) {
-        let completion = completionResult! /* Not really optional, so cannot be nil */
-        
-        guard let topPresentingViewController = topPresentedViewController?.presentingViewController else {
-            completion(.failure(.authenticationRequestFailed))
-            resetManager()
-            return
-        }
-        topPresentingViewController.dismiss(animated: true, completion: nil)
-        
-        guard let urlDictionary = url.queryDictionary else {
-            completion(.failure(.authenticationRequestFailed))
-            resetManager()
-            return
-        }
-        let result = AuthenticationRequest.Result(from: urlDictionary)
-        tokenRequest(wihtOverrideConfig: overrideConfiguration, authenticationResult: result, completion: completion)
+
+        /* Authentication Session Execution */
+
+        authenticationSession.start()
     }
     
     private static func tokenRequest(wihtOverrideConfig overrideConfig: Configuration?,
-                                     authenticationResult: AuthenticationRequest.Result,
+                                     code: String,
                                      completion: @escaping CompletionResult)
     {
-        /* Token Request Prerequisites Checks */
-        
         guard let managerConfiguration = configuration else {
             completion(.failure(.noConfiguration))
-            resetManager()
-            return
-        }
-        
-        guard let code = authenticationResult.code, authenticationResult.state == state else {
-            completion(.failure(.authenticationRequestFailed))
             resetManager()
             return
         }
@@ -274,6 +233,7 @@ public enum GoogleSignInKit {
             resetManager()
             return
         }
+
         var tokenURLRequest = URLRequest(url: tokenURL)
         tokenURLRequest.httpMethod = "POST"
         tokenURLRequest.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
@@ -335,9 +295,7 @@ public enum GoogleSignInKit {
     
     private static func resetManager() {
         state = nil
-        completionResult = nil
-        safariViewControllerDelegate = nil
         if #available(iOS 13.0, macOS 10.15, macCatalyst 13.0, *) { presentationContextProvider = nil }
-        if #available(iOS 12.0, macOS 10.15, macCatalyst 13.0, watchOS 6.2, *) { authenticationSession = nil }
     }
+
 }
