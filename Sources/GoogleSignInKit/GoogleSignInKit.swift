@@ -22,11 +22,11 @@ public typealias Window = NSWindow
 #endif
 
 public enum GoogleSignInKit {
-    
+
     // MARK: - Types
-    
+
     public typealias CompletionResult = (Result<GoogleSignInKit.Credentials, GoogleSignInKit.Error>) -> Void
-    
+
     public enum Manager {
         /* Main configuration of manager with default values */
         public struct Configuration {
@@ -34,7 +34,7 @@ public enum GoogleSignInKit {
             let defaultScheme: String
             let defaultCallbackURL: String
             let defaultScopes: [GoogleSignInKit.Scope]
-            
+
             public init(clientID: String, defaultScheme: String, defaultCallbackURL: String, defaultScopes: [GoogleSignInKit.Scope]) {
                 self.clientID = clientID
                 self.defaultScheme = defaultScheme
@@ -43,20 +43,20 @@ public enum GoogleSignInKit {
             }
         }
     }
-    
+
     /** Configuration which can be used to temporary override default values */
     public struct Configuration {
         let scheme: String?
         let callbackURL: String?
         let scopes: [GoogleSignInKit.Scope]?
-        
+
         public init(scheme: String?, callbackURL: String?, scopes: [GoogleSignInKit.Scope]?) {
             self.scheme = scheme
             self.callbackURL = callbackURL
             self.scopes = scopes
         }
     }
-    
+
     /** Credentials received after a fully successful authentication request. */
     public struct Credentials: Codable {
         /** `idToken` is the JWT received from Google */
@@ -67,12 +67,12 @@ public enum GoogleSignInKit {
         public let expiresIn: TimeInterval?
         public let scopes: [GoogleSignInKit.Scope]?
     }
-    
+
     // MARK: - Properties
-    
+
     private static var state: String!
     private static var configuration: Manager.Configuration!
-    
+
     private static let jsonDecoder: JSONDecoder = {
         $0.keyDecodingStrategy = .convertFromSnakeCase
         return $0
@@ -92,13 +92,13 @@ public enum GoogleSignInKit {
     }
 
     private static var presentationContextProvider: PresentationContextProvider!
-    
+
     // MARK: - Usage
-    
+
     public static func configure(configuration: GoogleSignInKit.Manager.Configuration) {
         self.configuration = configuration
     }
-    
+
     /** Method to call to let user consent to the authentication. As a result of the consent you will
      receive a `Credentials` struct which contains all you need to authenticate user from your side.
      - Note : You can use this one or `signIn(overrideConfig:completion:)` but you you **must** not
@@ -108,7 +108,7 @@ public enum GoogleSignInKit {
         self.configuration = configuration
         try signIn(completion: completion)
     }
-    
+
     /** Method to call to let user consent to the authentication. As a result of the consent you will
      receive a `Credentials` struct which contains all you need to authenticate user from your side.
      - Note : You can use this one or `signIn(configuration:completion:)` but you you **must** not
@@ -116,19 +116,19 @@ public enum GoogleSignInKit {
      */
     public static func signIn(overrideConfig: GoogleSignInKit.Configuration? = nil, completion: @escaping GoogleSignInKit.CompletionResult) throws {
         /* Sign-In Prerequisites Checks */
-        
+
         guard let managerConfiguration = configuration else { throw GoogleSignInKit.Error.noConfiguration }
-        
+
         /* Sign-In Prerequisites Setup */
-        
+
         state = UUID().uuidString
-        
+
         /* Authentication Request Setup */
-        
+
         let scheme = (overrideConfig?.scheme ?? managerConfiguration.defaultScheme)
         let uri = (overrideConfig?.callbackURL ?? managerConfiguration.defaultCallbackURL)
         let scopes = (overrideConfig?.scopes ?? managerConfiguration.defaultScopes).map({ $0.rawValue }).joined(separator: " ")
-        
+
         var urlComponents = URLComponents(string: AuthenticationRequest.baseURLString)
         let queryItems = [
             URLQueryItem(name: "state", value: state),
@@ -138,7 +138,7 @@ public enum GoogleSignInKit {
             URLQueryItem(name: "client_id", value: managerConfiguration.clientID)
         ]
         urlComponents?.queryItems = queryItems
-        
+
         guard let authenticationURL = urlComponents?.url else {
             resetManager()
             throw GoogleSignInKit.Error.failedToSetupAuthenticationRequest
@@ -215,7 +215,7 @@ public enum GoogleSignInKit {
 
         authenticationSession.start()
     }
-    
+
     private static func tokenRequest(wihtOverrideConfig overrideConfig: Configuration?,
                                      code: String,
                                      completion: @escaping CompletionResult)
@@ -225,9 +225,9 @@ public enum GoogleSignInKit {
             resetManager()
             return
         }
-        
+
         /* Token Request Setup */
-        
+
         guard let tokenURL = URL(string: TokenRequest.baseURLString) else {
             completion(.failure(.failedToSetupCredentialsRequest))
             resetManager()
@@ -251,26 +251,26 @@ public enum GoogleSignInKit {
             return
         }
         tokenURLRequest.httpBody = bodyData
-        
+
         /* Token Task Setup */
-        
+
         let tokenTask = URLSession.shared.dataTask(with: tokenURLRequest, completionHandler: { data, response, error in
             defer { resetManager() }
-            
+
             /* Token Task Result Checks */
-            
+
             guard error == nil, let data = data, let response = response as? HTTPURLResponse else {
                 completion(.failure(.credentialsRequestFailed))
                 return
             }
-            
+
             guard (200...299) ~= response.statusCode else {
                 completion(.failure(.credentialsRequestFailed))
                 return
             }
-            
+
             /* Token Task Result Parsing */
-            
+
             do {
                 let result = try jsonDecoder.decode(TokenRequest.Result.self, from: data)
                 let scopes = result.scope?.components(separatedBy: " ").compactMap({ ScopeURL(rawValue: $0)?.scope })
@@ -285,14 +285,14 @@ public enum GoogleSignInKit {
                 completion(.failure(.credentialsRequestFailed))
             }
         })
-        
+
         /* Token Task Execution */
-        
+
         tokenTask.resume()
     }
-    
+
     // MARK: - Utilities
-    
+
     private static func resetManager() {
         state = nil
         if #available(iOS 13.0, macOS 10.15, macCatalyst 13.0, *) { presentationContextProvider = nil }

@@ -8,7 +8,7 @@
 import Foundation
 
 extension GoogleSignInKit {
-    
+
     public enum Error: CustomNSError {
         case unknown
         case canceled
@@ -18,7 +18,7 @@ extension GoogleSignInKit {
         case authenticationRequestFailed
         case failedToSetupCredentialsRequest
         case credentialsRequestFailed
-        
+
         public static var errorDomain: String {
             return "GoogleSignInKit.GoogleSignInKit"
         }

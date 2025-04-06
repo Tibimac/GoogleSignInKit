@@ -8,10 +8,10 @@
 import Foundation
 
 extension GoogleSignInKit {
-    
+
     internal enum AuthenticationRequest {
         internal static let baseURLString: String = "https://accounts.google.com/o/oauth2/auth"
-        
+
         /* This struct is for internal use only. Used to store info from callback URL
          after the authentication consent on Google accounts webpage.
          Example :
@@ -23,7 +23,7 @@ extension GoogleSignInKit {
             let scopes: String?
             let prompt: String?
             let authUser: String?
-            
+
             init(from dictionary: [String: String]) {
                 code = dictionary["code"]
                 state = dictionary["state"]

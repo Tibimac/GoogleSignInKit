@@ -9,7 +9,7 @@ import AuthenticationServices
 
 internal final class PresentationContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
     private let appAnchor: ASPresentationAnchor
-    
+
     init(appAnchor: ASPresentationAnchor) {
         self.appAnchor = appAnchor
         super.init()
