@@ -1,6 +1,17 @@
 # GoogleSignInKit
 
-![Static Badge](https://img.shields.io/badge/SwiftPM-Compatible-brightgreen.svg)
+<p align="left">
+	<img alt="Static Badge" src="https://img.shields.io/badge/Licence-MIT-color.svg?&logoSize=auto&labelColor=black&color=FFC600">
+	<img alt="Static Badge" src="https://img.shields.io/badge/SPM-Compatible-color.svg?&logoSize=auto&labelColor=black&color=green">
+	<a href="https://swiftpackageindex.com/Tibimac/GoogleSignInKit" target="_blank">
+		<img alt="Static Badge" src="https://img.shields.io/badge/Swift-5.8_%7C_5.9_%7C_5.10_%7C_6.0-color?logo=swift&logoColor=F05138&logoSize=auto&labelColor=black&color=F05138">
+	</a>
+	<img alt="Static Badge" src="https://img.shields.io/badge/Platform-iOS_|_macOS-color.svg?&logoSize=auto&labelColor=black&color=blue">
+	<a href="https://mastodon.social/@tibimac" target="_blank">
+		<img alt="Static Badge" src="https://img.shields.io/badge/Mastodon-Tibimac-color?logo=mastodon&logoColor=6364FF&logoSize=auto&labelColor=black&color=6364FF">
+	</a>
+</p>
+
 
 This module is intended to be used to do a "Google Sign-In" for your app.
 Using this module will give you ability to authenticate a user and either create him an account or log him to an existing account.
