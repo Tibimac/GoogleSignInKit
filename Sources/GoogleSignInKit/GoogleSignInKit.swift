@@ -46,7 +46,7 @@ public enum GoogleSignInKit {
     }
     
     /** Credentials received after a fully successful authentication request. */
-    public struct Credentials {
+    public struct Credentials: Codable {
         /** `idToken` is the JWT received from Google */
         public let idToken: String?
         public let tokenType: String?
