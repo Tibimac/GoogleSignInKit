@@ -4,7 +4,7 @@
 	<img alt="Static Badge" src="https://img.shields.io/badge/Licence-MIT-color.svg?&logoSize=auto&labelColor=black&color=FFC600">
 	<img alt="Static Badge" src="https://img.shields.io/badge/SPM-Compatible-color.svg?&logoSize=auto&labelColor=black&color=green">
 	<a href="https://swiftpackageindex.com/Tibimac/GoogleSignInKit" target="_blank">
-		<img alt="Static Badge" src="https://img.shields.io/badge/Swift-5.8_%7C_5.9_%7C_5.10_%7C_6.0-color?logo=swift&logoColor=F05138&logoSize=auto&labelColor=black&color=F05138">
+		<img alt="Static Badge" src="https://img.shields.io/badge/Swift-5.9_%7C_5.10_%7C_6.0-color?logo=swift&logoColor=F05138&logoSize=auto&labelColor=black&color=F05138">
 	</a>
 	<img alt="Static Badge" src="https://img.shields.io/badge/Platform-iOS_|_macOS-color.svg?&logoSize=auto&labelColor=black&color=blue">
 	<a href="https://mastodon.social/@tibimac" target="_blank">
