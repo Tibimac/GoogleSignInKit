@@ -273,7 +273,7 @@ public enum GoogleSignInKit {
 
             do {
                 let result = try jsonDecoder.decode(TokenRequest.Result.self, from: data)
-                let scopes = result.scope?.components(separatedBy: " ").compactMap({ ScopeURL(rawValue: $0)?.scope })
+                let scopes = result.scope?.components(separatedBy: " ").compactMap({ Scope(rawValue: $0) })
                 let credentials = Credentials(idToken: result.idToken,
                                               tokenType: result.tokenType,
                                               accessToken: result.accessToken,
